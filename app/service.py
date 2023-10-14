@@ -25,6 +25,7 @@ class TaskService:
         print(f"{datetime.now().replace(microsecond=0)}: Program has started")
 
         while True:
+            await asyncio.sleep(self.settings.REFRESH_INTERVAL)  # интервал между опросами таблицы
             try:
                 sheet_data = self.gsheet.read_sheet()  # чтение таблицы
 
@@ -33,55 +34,75 @@ class TaskService:
                     task_status: str = sheet_data[i][0]
                     work_mode: str = sheet_data[i][1]
                     auto_mode: str = sheet_data[i][2]
+                    log = None
 
                     if task_status == "Собрать ключи":
                         """
                         Сборка данных
                         """
-                        if work_mode == "По названию товара" and sheet_data[i][4]:
-                            item_name = sheet_data[i][4]
-                            print(f"{datetime.now().replace(microsecond=0)}: Sent task from row {row_id} to queue")
-                            self.gsheet.update_status("В работе", row_id)
-                            (
-                                self.send_task.parse_mpstats_keywords_by_item_name
-                                .apply_async((auto_mode, item_name, row_id), queue="mpstats")
-                            )
+                        if work_mode == "По названию товара":
+                            wb_sku = sheet_data[i][3]
+                            if wb_sku:
+                                log = 1
+                                self.gsheet.update_status("В работе", row_id)
+                                self.gsheet.update_cell("", f"L{row_id}")
+                                self.send_task.req_data_task.delay(
+                                    mode="by_name",
+                                    auto_mode=auto_mode,
+                                    wb_sku=wb_sku,
+                                    row_id=row_id
+                                )
+                            else:
+                                self.gsheet.update_cell("Недостаточно данных: название товара", f"L{row_id}")
+                                self.gsheet.update_status("ОШИБКА", row_id)
 
-                        elif work_mode == "Со сборкой ключей V1.0" and sheet_data[i][3]:
+                        elif work_mode == "Со сборкой ключей V1.0":
                             wb_sku = int(re.search(r"\d+", sheet_data[i][3]).group()) if sheet_data[i][3] else None
-                            print(f"{datetime.now().replace(microsecond=0)}: Sent task from row {row_id} to queue")
-                            self.gsheet.update_status("В работе", row_id)
-                            queue = chain(
-                                self.send_task.parse_wb_item_name.si(wb_sku, row_id)  # Название товара
-                                | self.send_task.parse_wb_item_params.si(wb_sku, row_id)  # Характеристики товара
-                                # Ключевые слова
-                                | self.send_task.parse_mpstats_keywords_by_sku.si(auto_mode, wb_sku, row_id)
-                            )
-                            queue.apply_async(queue="mpstats")
+                            if wb_sku:
+                                log = 1
+                                self.gsheet.update_status("В работе", row_id)
+                                self.gsheet.update_cell("", f"L{row_id}")
+                                self.send_task.req_data_task.delay(
+                                    mode="v1",
+                                    auto_mode=auto_mode,
+                                    wb_sku=wb_sku,
+                                    row_id=row_id
+                                )
+                            else:
+                                self.gsheet.update_cell("Недостаточно данных: SKU или ссылка на товар", f"L{row_id}")
+                                self.gsheet.update_status("ОШИБКА", row_id)
 
-                        elif work_mode == "Со сборкой ключей V1.2" and sheet_data[i][3]:
+                        elif work_mode == "Со сборкой ключей V1.2":
                             wb_sku = int(re.search(r"\d+", sheet_data[i][3]).group()) if sheet_data[i][3] else None
-                            print(f"{datetime.now().replace(microsecond=0)}: Sent task from row {row_id} to queue")
-                            self.gsheet.update_status("В работе", row_id)
-                            queue = chain(
-                                self.send_task.parse_wb_item_name.si(wb_sku, row_id)  # Название товара
-                                | self.send_task.parse_wb_item_params.si(wb_sku, row_id)  # Характеристики товара
-                                | self.send_task.parse_wb_item_desc.si(wb_sku, row_id)  # Описание товара
-                                # Ключевые слова
-                                | self.send_task.parse_mpstats_keywords_by_sku.si(auto_mode, wb_sku, row_id)
-                            )
-                            queue.apply_async(queue="mpstats")
+                            if wb_sku:
+                                log = 1
+                                self.gsheet.update_status("В работе", row_id)
+                                self.gsheet.update_cell("", f"L{row_id}")
+                                self.send_task.req_data_task.delay(
+                                    mode="v1.2",
+                                    auto_mode=auto_mode,
+                                    wb_sku=wb_sku,
+                                    row_id=row_id
+                                )
+                            else:
+                                self.gsheet.update_cell("Недостаточно данных: SKU или ссылка на товар", f"L{row_id}")
+                                self.gsheet.update_status("ОШИБКА", row_id)
 
                     if task_status == "Сгенерировать описание":
                         """
                         Генерация описания
                         """
+                        log = 1
                         prompt = self.utils.row_to_ai_prompt(sheet_data[i])
-                        print(f"{datetime.now().replace(microsecond=0)}: Sent task from row {row_id} to queue")
                         self.gsheet.update_status("В работе", row_id)
-                        self.send_task.chatgpt_task.apply_async((prompt, row_id), queue="chatgpt")
+                        self.send_task.chatgpt_task.delay(
+                            prompt=prompt,
+                            row_id=row_id
+                        )
 
-                await asyncio.sleep(self.settings.REFRESH_INTERVAL)  # интервал между опросами таблицы
+                    if log:
+                        print(f"{datetime.now().replace(microsecond=0)}:"
+                              f" Sent task from row {row_id} to queue")
 
             except Exception as ex:
                 print(ex)

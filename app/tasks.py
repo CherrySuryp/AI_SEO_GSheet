@@ -21,7 +21,7 @@ class Worker:
 
     @staticmethod
     @celery.task(soft_time_limit=120, time_limit=180)
-    def get_parsed_data(
+    def req_data_task(
             mode: Literal["v1", "v1.2", "by_name"],
             auto_mode: str,
             wb_sku: int | str,
@@ -46,7 +46,7 @@ class Worker:
                     Worker.gsheet.update_cell(
                         "Произошла ошибка сбора данных. "
                         "Скорее всего все сработает если попробовать еще раз.",
-                        f"J{row_id}"
+                        f"K{row_id}"
                     )
                     break
                 if check.json()["status"] == "SUCCESS":
@@ -75,8 +75,10 @@ class Worker:
 
         if auto_mode == "Ручной":
             Worker.gsheet.update_status("Завершено", row_id)
+            Worker.gsheet.update_cell("", f"K{row_id}")
         else:
             Worker.gsheet.update_status("Сгенерировать описание", row_id)
+            Worker.gsheet.update_cell("", f"K{row_id}")
 
     @staticmethod
     @celery.task(soft_time_limit=180, time_limit=240)
@@ -99,14 +101,16 @@ class Worker:
                     Worker.gsheet.update_cell(
                         "Произошла ошибка генерации текста. "
                         "Скорее всего все сработает если попробовать еще раз.",
-                        f"J{row_id}"
+                        f"K{row_id}"
                     )
+                    Worker.gsheet.update_status("ОШИБКА", row_id)
                     break
                 if check.json()["status"] == "SUCCESS":
                     result = check.json()["result"]
 
                     # Записываем результат в таблицу
                     Worker.gsheet.update_status("Завершено", row_id)
+                    Worker.gsheet.update_cell("", f"L{row_id}")
                     Worker.gsheet.update_cell(result, f"J{row_id}")
                     break
         except Exception as e:
