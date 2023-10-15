@@ -39,7 +39,7 @@ class Worker:
 
                 task_id = result.json()["task_id"]
                 check = requests.get(
-                    f"http://{Config().GPT_PATH}/{task_id}/result",
+                    f"http://{Config().PARSER_PATH}/{task_id}/result",
                     headers={"x-api-key": Config().GPT_KEY}
                 )
                 if result.status_code != 200 or check.status_code != 200:
