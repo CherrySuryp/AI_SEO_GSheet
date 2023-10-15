@@ -31,3 +31,5 @@ if Config().MODE == "PROD":
 
 else:
     REDIS_URL = "redis://127.0.0.1:6379/0"
+    Config().GPT_PATH = "91.206.15.62:8000"
+    Config().PARSER_PATH = "91.206.15.62:9000"

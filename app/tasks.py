@@ -1,3 +1,4 @@
+import random
 import time
 from typing import Literal
 
@@ -29,7 +30,7 @@ class Worker:
     ):
         try:
             result = requests.post(
-                f"http://91.206.15.62:9000/{wb_sku}",
+                f"http://{Config().PARSER_PATH}/{wb_sku}",
                 params={"mode": mode, "wb_sku": wb_sku},
                 headers={"x-api-key": Config().PARSER_KEY}
             )
@@ -38,7 +39,7 @@ class Worker:
 
                 task_id = result.json()["task_id"]
                 check = requests.get(
-                    f"http://91.206.15.62:9000/{task_id}/result",
+                    f"http://{Config().GPT_PATH}/{task_id}/result",
                     headers={"x-api-key": Config().GPT_KEY}
                 )
                 if result.status_code != 200 or check.status_code != 200:
@@ -84,8 +85,9 @@ class Worker:
     @celery.task(soft_time_limit=180, time_limit=240)
     def chatgpt_task(prompt: str, row_id: int) -> None:
         try:
+            time.sleep(random.randint(1, 5))
             result = requests.post(
-                f"http://91.206.15.62:8000/gpt",
+                f"http://{Config().GPT_PATH}/gpt",
                 params={"prompt": prompt},
                 headers={"x-api-key": Config().GPT_KEY}
             )
@@ -94,7 +96,7 @@ class Worker:
 
                 task_id = result.json()["task_id"]
                 check = requests.get(
-                    f"http://91.206.15.62:8000/{task_id}/result",
+                    f"http://{Config().GPT_PATH}/{task_id}/result",
                     headers={"x-api-key": Config().GPT_KEY}
                 )
                 if check.status_code == 500:
@@ -114,4 +116,5 @@ class Worker:
                     Worker.gsheet.update_cell(result, f"J{row_id}")
                     break
         except Exception as e:
+            print(e)
             sentry_sdk.capture_exception(e)
