@@ -22,32 +22,25 @@ class Worker:
 
     @staticmethod
     @celery.task(soft_time_limit=120, time_limit=180)
-    def req_data_task(
-            mode: Literal["v1", "v1.2", "by_name"],
-            auto_mode: str,
-            wb_sku: int | str,
-            row_id: int
-    ):
+    def req_data_task(mode: Literal["v1", "v1.2", "by_name"], auto_mode: str, wb_sku: int | str, row_id: int):
         try:
             result = requests.post(
                 f"http://{Config().PARSER_PATH}/{wb_sku}",
                 params={"mode": mode, "wb_sku": wb_sku},
-                headers={"x-api-key": Config().PARSER_KEY}
+                headers={"x-api-key": Config().PARSER_KEY},
             )
             while True:
                 time.sleep(2)
 
                 task_id = result.json()["task_id"]
                 check = requests.get(
-                    f"http://{Config().PARSER_PATH}/{task_id}/result",
-                    headers={"x-api-key": Config().GPT_KEY}
+                    f"http://{Config().PARSER_PATH}/{task_id}/result", headers={"x-api-key": Config().GPT_KEY}
                 )
                 if result.status_code != 200 or check.status_code != 200:
                     print(f"exc {row_id}")
                     Worker.gsheet.update_cell(
-                        "Произошла ошибка сбора данных. "
-                        "Скорее всего все сработает если попробовать еще раз.",
-                        f"K{row_id}"
+                        "Произошла ошибка сбора данных. " "Скорее всего все сработает если попробовать еще раз.",
+                        f"K{row_id}",
                     )
                     break
                 if check.json()["status"] == "SUCCESS":
@@ -87,23 +80,19 @@ class Worker:
         try:
             time.sleep(random.randint(1, 5))
             result = requests.post(
-                f"http://{Config().GPT_PATH}/gpt",
-                params={"prompt": prompt},
-                headers={"x-api-key": Config().GPT_KEY}
+                f"http://{Config().GPT_PATH}/gpt", params={"prompt": prompt}, headers={"x-api-key": Config().GPT_KEY}
             )
             while True:
                 time.sleep(2)
 
                 task_id = result.json()["task_id"]
                 check = requests.get(
-                    f"http://{Config().GPT_PATH}/{task_id}/result",
-                    headers={"x-api-key": Config().GPT_KEY}
+                    f"http://{Config().GPT_PATH}/{task_id}/result", headers={"x-api-key": Config().GPT_KEY}
                 )
                 if check.status_code == 500:
                     Worker.gsheet.update_cell(
-                        "Произошла ошибка генерации текста. "
-                        "Скорее всего все сработает если попробовать еще раз.",
-                        f"K{row_id}"
+                        "Произошла ошибка генерации текста. " "Скорее всего все сработает если попробовать еще раз.",
+                        f"K{row_id}",
                     )
                     Worker.gsheet.update_status("ОШИБКА", row_id)
                     break

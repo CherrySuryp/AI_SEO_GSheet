@@ -3,7 +3,6 @@ import asyncio
 from datetime import datetime
 
 import sentry_sdk
-from celery import chain
 
 from gsheets.service import GSheet
 from utils.service import TextUtils
@@ -47,10 +46,7 @@ class TaskService:
                                 self.gsheet.update_status("В работе", row_id)
                                 self.gsheet.update_cell("", f"L{row_id}")
                                 self.send_task.req_data_task.delay(
-                                    mode="by_name",
-                                    auto_mode=auto_mode,
-                                    wb_sku=wb_sku,
-                                    row_id=row_id
+                                    mode="by_name", auto_mode=auto_mode, wb_sku=wb_sku, row_id=row_id
                                 )
                             else:
                                 self.gsheet.update_cell("Недостаточно данных: название товара", f"L{row_id}")
@@ -63,10 +59,7 @@ class TaskService:
                                 self.gsheet.update_status("В работе", row_id)
                                 self.gsheet.update_cell("", f"L{row_id}")
                                 self.send_task.req_data_task.delay(
-                                    mode="v1",
-                                    auto_mode=auto_mode,
-                                    wb_sku=wb_sku,
-                                    row_id=row_id
+                                    mode="v1", auto_mode=auto_mode, wb_sku=wb_sku, row_id=row_id
                                 )
                             else:
                                 self.gsheet.update_cell("Недостаточно данных: SKU или ссылка на товар", f"L{row_id}")
@@ -79,10 +72,7 @@ class TaskService:
                                 self.gsheet.update_status("В работе", row_id)
                                 self.gsheet.update_cell("", f"L{row_id}")
                                 self.send_task.req_data_task.delay(
-                                    mode="v1.2",
-                                    auto_mode=auto_mode,
-                                    wb_sku=wb_sku,
-                                    row_id=row_id
+                                    mode="v1.2", auto_mode=auto_mode, wb_sku=wb_sku, row_id=row_id
                                 )
                             else:
                                 self.gsheet.update_cell("Недостаточно данных: SKU или ссылка на товар", f"L{row_id}")
@@ -95,14 +85,10 @@ class TaskService:
                         log = 1
                         prompt = self.utils.row_to_ai_prompt(sheet_data[i])
                         self.gsheet.update_status("В работе", row_id)
-                        self.send_task.chatgpt_task.delay(
-                            prompt=prompt,
-                            row_id=row_id
-                        )
+                        self.send_task.chatgpt_task.delay(prompt=prompt, row_id=row_id)
 
                     if log:
-                        print(f"{datetime.now().replace(microsecond=0)}:"
-                              f" Sent task from row {row_id} to queue")
+                        print(f"{datetime.now().replace(microsecond=0)}:" f" Sent task from row {row_id} to queue")
 
             except Exception as ex:
                 print(ex)
