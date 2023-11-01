@@ -90,7 +90,7 @@ class TaskService:
                         Обновление информации в ЛК продавца
                         """
                         try:
-                            wb_sku = int(re.search(r"\d+", sheet_data[i][3]).group()) if sheet_data[i][3]
+                            wb_sku = int(re.search(r"\d+", sheet_data[i][3]).group())
                             desc = sheet_data[i][9]
                         except IndexError:
                             wb_sku = None
