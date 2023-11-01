@@ -89,8 +89,13 @@ class TaskService:
                         """
                         Обновление информации в ЛК продавца
                         """
-                        wb_sku = int(re.search(r"\d+", sheet_data[i][3]).group()) if sheet_data[i][3] else None
-                        desc = sheet_data[i][9]
+                        try:
+                            wb_sku = int(re.search(r"\d+", sheet_data[i][3]).group()) if sheet_data[i][3]
+                            desc = sheet_data[i][9]
+                        except IndexError:
+                            wb_sku = None
+                            desc = None
+
                         if not desc:
                             Worker.gsheet.update_cell("Нет описания", f"K{row_id}")
                             Worker.gsheet.update_status("ОШИБКА", row_id)
