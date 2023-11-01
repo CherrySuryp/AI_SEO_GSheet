@@ -41,7 +41,7 @@ class Worker:
                     print(f"exc {row_id}")
                     Worker.gsheet.update_cell(
                         "Произошла ошибка сбора данных. " "Скорее всего все сработает если попробовать еще раз.",
-                        f"K{row_id}",
+                        f"L{row_id}",
                     )
                     break
                 if check.json()["status"] == "SUCCESS":
@@ -93,7 +93,7 @@ class Worker:
                 if check.status_code == 500:
                     Worker.gsheet.update_cell(
                         "Произошла ошибка генерации текста. " "Скорее всего все сработает если попробовать еще раз.",
-                        f"K{row_id}",
+                        f"L{row_id}",
                     )
                     Worker.gsheet.update_status("ОШИБКА", row_id)
                     break
@@ -123,6 +123,6 @@ class Worker:
         else:
             Worker.gsheet.update_cell(
                 "Не удалось обновить описание. Товар не найден или не принадлежит Вам. Убедитесь что верно ввели SKU.",
-                f"K{row_id}",
+                f"L{row_id}",
             )
             Worker.gsheet.update_status("ОШИБКА", row_id)

@@ -47,7 +47,7 @@ class TaskService:
                                     mode="by_name", auto_mode=auto_mode, wb_sku=wb_sku, row_id=row_id
                                 )
                             else:
-                                self.gsheet.update_cell("Недостаточно данных: название товара", f"L{row_id}")
+                                self.gsheet.update_cell("Недостаточно данных: название товара", f"K{row_id}")
                                 self.gsheet.update_status("ОШИБКА", row_id)
 
                         elif work_mode == "Со сборкой ключей V1.0":
@@ -60,7 +60,7 @@ class TaskService:
                                     mode="v1", auto_mode=auto_mode, wb_sku=wb_sku, row_id=row_id
                                 )
                             else:
-                                self.gsheet.update_cell("Недостаточно данных: SKU или ссылка на товар", f"L{row_id}")
+                                self.gsheet.update_cell("Недостаточно данных: SKU или ссылка на товар", f"K{row_id}")
                                 self.gsheet.update_status("ОШИБКА", row_id)
 
                         elif work_mode == "Со сборкой ключей V1.2":
@@ -73,7 +73,7 @@ class TaskService:
                                     mode="v1.2", auto_mode=auto_mode, wb_sku=wb_sku, row_id=row_id
                                 )
                             else:
-                                self.gsheet.update_cell("Недостаточно данных: SKU или ссылка на товар", f"L{row_id}")
+                                self.gsheet.update_cell("Недостаточно данных: SKU или ссылка на товар", f"K{row_id}")
                                 self.gsheet.update_status("ОШИБКА", row_id)
 
                     if task_status == "Сгенерировать описание":
