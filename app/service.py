@@ -97,10 +97,10 @@ class TaskService:
                             desc = None
 
                         if not desc:
-                            Worker.gsheet.update_cell("Нет описания", f"K{row_id}")
+                            Worker.gsheet.update_cell("Нет описания", f"L{row_id}")
                             Worker.gsheet.update_status("ОШИБКА", row_id)
                         elif not wb_sku:
-                            Worker.gsheet.update_cell("Нет SKU", f"K{row_id}")
+                            Worker.gsheet.update_cell("Нет SKU", f"L{row_id}")
                             Worker.gsheet.update_status("ОШИБКА", row_id)
                         else:
                             self.gsheet.update_status("В работе", row_id)
