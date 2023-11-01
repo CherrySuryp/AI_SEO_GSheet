@@ -91,6 +91,7 @@ class TaskService:
                         """
                         wb_sku = int(re.search(r"\d+", sheet_data[i][3]).group()) if sheet_data[i][3] else None
                         desc = sheet_data[i][9]
+                        self.gsheet.update_status("В работе", row_id)
                         self.send_task.upload_to_wb_task.delay(wb_sku=wb_sku, desc=desc, row_id=row_id)
                     if log:
                         print(f"{datetime.now().replace(microsecond=0)}:" f" Sent task from row {row_id} to queue")

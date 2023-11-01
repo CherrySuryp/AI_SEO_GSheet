@@ -119,6 +119,7 @@ class Worker:
         if item_data:
             item_data[-1]["characteristics"][-1]["Описание"] = desc
             wb_api.update_description(item_data)
+            Worker.gsheet.update_status("Завершено", row_id)
         else:
             Worker.gsheet.update_cell(
                 "Не удалось обновить описание. Товар не найден или не принадлежит Вам. Убедитесь что верно ввели SKU.",
