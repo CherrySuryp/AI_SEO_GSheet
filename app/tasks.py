@@ -5,6 +5,7 @@ from typing import Literal
 import sentry_sdk
 import requests
 
+from wb_upload.service import WildberriesAPI
 from gsheets.service import GSheet
 from utils.service import TextUtils
 
@@ -40,7 +41,7 @@ class Worker:
                     print(f"exc {row_id}")
                     Worker.gsheet.update_cell(
                         "Произошла ошибка сбора данных. " "Скорее всего все сработает если попробовать еще раз.",
-                        f"K{row_id}",
+                        f"L{row_id}",
                     )
                     break
                 if check.json()["status"] == "SUCCESS":
@@ -92,10 +93,11 @@ class Worker:
                 if check.status_code == 500:
                     Worker.gsheet.update_cell(
                         "Произошла ошибка генерации текста. " "Скорее всего все сработает если попробовать еще раз.",
-                        f"K{row_id}",
+                        f"L{row_id}",
                     )
                     Worker.gsheet.update_status("ОШИБКА", row_id)
                     break
+
                 if check.json()["status"] == "SUCCESS":
                     result = check.json()["result"]
 
@@ -107,3 +109,20 @@ class Worker:
         except Exception as e:
             print(e)
             sentry_sdk.capture_exception(e)
+
+    @staticmethod
+    @celery.task(time_limit=60)
+    def upload_to_wb_task(wb_sku: str | int, desc: str, row_id: int) -> None:
+        wb_api = WildberriesAPI()
+        item_data = wb_api.get_item_data(wb_sku)
+
+        if item_data:
+            item_data[-1]["characteristics"][-1]["Описание"] = desc
+            wb_api.update_description(item_data)
+            Worker.gsheet.update_status("Завершено", row_id)
+        else:
+            Worker.gsheet.update_cell(
+                "Не удалось обновить описание. Товар не найден или не принадлежит Вам. Убедитесь что верно ввели SKU.",
+                f"L{row_id}",
+            )
+            Worker.gsheet.update_status("ОШИБКА", row_id)

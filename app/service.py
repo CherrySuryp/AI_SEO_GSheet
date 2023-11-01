@@ -2,8 +2,6 @@ import re
 import asyncio
 from datetime import datetime
 
-import sentry_sdk
-
 from gsheets.service import GSheet
 from utils.service import TextUtils
 from config import Config
@@ -49,7 +47,7 @@ class TaskService:
                                     mode="by_name", auto_mode=auto_mode, wb_sku=wb_sku, row_id=row_id
                                 )
                             else:
-                                self.gsheet.update_cell("Недостаточно данных: название товара", f"L{row_id}")
+                                self.gsheet.update_cell("Недостаточно данных: название товара", f"K{row_id}")
                                 self.gsheet.update_status("ОШИБКА", row_id)
 
                         elif work_mode == "Со сборкой ключей V1.0":
@@ -62,7 +60,7 @@ class TaskService:
                                     mode="v1", auto_mode=auto_mode, wb_sku=wb_sku, row_id=row_id
                                 )
                             else:
-                                self.gsheet.update_cell("Недостаточно данных: SKU или ссылка на товар", f"L{row_id}")
+                                self.gsheet.update_cell("Недостаточно данных: SKU или ссылка на товар", f"K{row_id}")
                                 self.gsheet.update_status("ОШИБКА", row_id)
 
                         elif work_mode == "Со сборкой ключей V1.2":
@@ -75,7 +73,7 @@ class TaskService:
                                     mode="v1.2", auto_mode=auto_mode, wb_sku=wb_sku, row_id=row_id
                                 )
                             else:
-                                self.gsheet.update_cell("Недостаточно данных: SKU или ссылка на товар", f"L{row_id}")
+                                self.gsheet.update_cell("Недостаточно данных: SKU или ссылка на товар", f"K{row_id}")
                                 self.gsheet.update_status("ОШИБКА", row_id)
 
                     if task_status == "Сгенерировать описание":
@@ -87,10 +85,28 @@ class TaskService:
                         self.gsheet.update_status("В работе", row_id)
                         self.send_task.chatgpt_task.delay(prompt=prompt, row_id=row_id)
 
+                    if task_status == "Выгрузить на ВБ":
+                        """
+                        Обновление информации в ЛК продавца
+                        """
+                        try:
+                            wb_sku = int(re.search(r"\d+", sheet_data[i][3]).group())
+                            desc = sheet_data[i][9]
+                        except IndexError:
+                            wb_sku = None
+                            desc = None
+
+                        if not desc:
+                            Worker.gsheet.update_cell("Нет описания", f"L{row_id}")
+                            Worker.gsheet.update_status("ОШИБКА", row_id)
+                        elif not wb_sku:
+                            Worker.gsheet.update_cell("Нет SKU", f"L{row_id}")
+                            Worker.gsheet.update_status("ОШИБКА", row_id)
+                        else:
+                            self.gsheet.update_status("В работе", row_id)
+                            self.send_task.upload_to_wb_task.delay(wb_sku=wb_sku, desc=desc, row_id=row_id)
                     if log:
                         print(f"{datetime.now().replace(microsecond=0)}:" f" Sent task from row {row_id} to queue")
-
             except Exception as ex:
                 print(ex)
-                sentry_sdk.capture_exception(ex)
                 await asyncio.sleep(self.settings.REFRESH_INTERVAL / 2)

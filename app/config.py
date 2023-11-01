@@ -23,10 +23,12 @@ class Config(BaseSettings):
     GSHEET_ID: str
     GOOGLE_CREDS: str
 
+    WILDBERRIES_TOKEN: str
 
-settings = Config()
 
-if Config().MODE == "PROD":
+config = Config()
+
+if config.MODE == "PROD":
     REDIS_URL = "redis://redis_ai_seo_gsheet:6379/0"
 
 else:
