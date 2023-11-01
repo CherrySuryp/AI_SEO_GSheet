@@ -91,8 +91,15 @@ class TaskService:
                         """
                         wb_sku = int(re.search(r"\d+", sheet_data[i][3]).group()) if sheet_data[i][3] else None
                         desc = sheet_data[i][9]
-                        self.gsheet.update_status("В работе", row_id)
-                        self.send_task.upload_to_wb_task.delay(wb_sku=wb_sku, desc=desc, row_id=row_id)
+                        if not desc:
+                            Worker.gsheet.update_cell("Нет описания", f"K{row_id}")
+                            Worker.gsheet.update_status("ОШИБКА", row_id)
+                        elif not wb_sku:
+                            Worker.gsheet.update_cell("Нет SKU", f"K{row_id}")
+                            Worker.gsheet.update_status("ОШИБКА", row_id)
+                        else:
+                            self.gsheet.update_status("В работе", row_id)
+                            self.send_task.upload_to_wb_task.delay(wb_sku=wb_sku, desc=desc, row_id=row_id)
                     if log:
                         print(f"{datetime.now().replace(microsecond=0)}:" f" Sent task from row {row_id} to queue")
             except Exception as ex:
