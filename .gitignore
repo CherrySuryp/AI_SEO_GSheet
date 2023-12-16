@@ -1,3 +1,5 @@
 .env
 .idea
+.venv
 venv
+app/wb_upload/item.json

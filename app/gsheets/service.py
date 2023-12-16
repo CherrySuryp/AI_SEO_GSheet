@@ -7,8 +7,6 @@ from googleapiclient.errors import HttpError  # noqa
 
 import sys
 
-sys.path.append("..")
-
 from app.config import Config  # noqa
 
 
