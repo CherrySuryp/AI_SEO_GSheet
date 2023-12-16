@@ -5,7 +5,7 @@ from datetime import datetime
 import sentry_sdk
 
 from gsheets.service import GSheet
-from utils.service import TextUtils
+from utils.service import TextUtils, GPTUtils
 from config import Config
 from tasks import Worker
 
@@ -15,7 +15,8 @@ class TaskService:
         self.settings = Config()
         self.send_task = Worker()
         self.gsheet = GSheet()
-        self.utils = TextUtils()
+        self.text_utils = TextUtils()
+        self.gpt_utils = GPTUtils()
 
     async def fetcher_worker(self) -> None:
         """
@@ -30,10 +31,11 @@ class TaskService:
 
                 for i in range(len(sheet_data)):
                     row_id = i + 2
-                    task_status: str = sheet_data[i][0]
-                    work_mode: str = sheet_data[i][1]
-                    auto_mode: str = sheet_data[i][2]
-                    log = None
+                    row_data = sheet_data[i]
+                    task_status: str = row_data[0]
+                    work_mode: str = row_data[1]
+                    auto_mode: str = row_data[2]
+                    log = False
 
                     if task_status == "Собрать ключи":
                         """
@@ -42,10 +44,10 @@ class TaskService:
                         if work_mode == "По названию товара":
                             wb_sku = sheet_data[i][3]
                             if wb_sku:
-                                log = 1
+                                log = True
                                 self.gsheet.update_status("В работе", row_id)
                                 self.gsheet.update_cell("", f"L{row_id}")
-                                self.send_task.req_data_task.delay(
+                                self.send_task.req_item_data_task.delay(
                                     mode="by_name", auto_mode=auto_mode, wb_sku=wb_sku, row_id=row_id
                                 )
                             else:
@@ -55,10 +57,10 @@ class TaskService:
                         elif work_mode == "Со сборкой ключей V1.0":
                             wb_sku = int(re.search(r"\d+", sheet_data[i][3]).group()) if sheet_data[i][3] else None
                             if wb_sku:
-                                log = 1
+                                log = True
                                 self.gsheet.update_status("В работе", row_id)
                                 self.gsheet.update_cell("", f"L{row_id}")
-                                self.send_task.req_data_task.delay(
+                                self.send_task.req_item_data_task.delay(
                                     mode="v1", auto_mode=auto_mode, wb_sku=wb_sku, row_id=row_id
                                 )
                             else:
@@ -71,7 +73,7 @@ class TaskService:
                                 log = 1
                                 self.gsheet.update_status("В работе", row_id)
                                 self.gsheet.update_cell("", f"L{row_id}")
-                                self.send_task.req_data_task.delay(
+                                self.send_task.req_item_data_task.delay(
                                     mode="v1.2", auto_mode=auto_mode, wb_sku=wb_sku, row_id=row_id
                                 )
                             else:
@@ -82,10 +84,17 @@ class TaskService:
                         """
                         Генерация описания
                         """
-                        log = 1
-                        prompt = self.utils.row_to_ai_prompt(sheet_data[i])
+                        log = True
+                        prompt = self.gpt_utils.row_to_generate_description_prompt(sheet_data[i])
                         self.gsheet.update_status("В работе", row_id)
-                        self.send_task.chatgpt_task.delay(prompt=prompt, row_id=row_id)
+                        self.send_task.gpt_generate_description_task.delay(prompt=prompt, row_id=row_id)
+
+                    if task_status == "Проверить ключи":
+                        log = True
+                        keywords = row_data[7]
+                        description = row_data[9]
+                        prompt = self.gpt_utils.check_keywords_in_desc_prompt(keywords, description)
+                        self.send_task.gpt_generate_description_task.delay(prompt=prompt, row_id=row_id)
 
                     if log:
                         print(f"{datetime.now().replace(microsecond=0)}:" f" Sent task from row {row_id} to queue")
