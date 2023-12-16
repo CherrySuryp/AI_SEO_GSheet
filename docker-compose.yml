@@ -11,7 +11,7 @@ services:
     build:
       context: .
     working_dir: /app
-    command: ["celery", "-A", "celery_app", "worker", "--loglevel=INFO", "--pool=prefork", "--concurrency=5"]
+    command: ["celery", "-A", "queue", "worker", "--loglevel=INFO", "--pool=prefork", "--concurrency=3"]
     depends_on:
       - redis
     networks:
@@ -22,7 +22,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: ai_seo_gsheet
-    command: ["python", "-u", "./app/main.py"]
+    command: ["python", "-m", "app.main"]
     depends_on:
       - celery
     networks:
