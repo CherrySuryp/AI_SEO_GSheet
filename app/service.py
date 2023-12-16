@@ -2,10 +2,10 @@ import re
 import asyncio
 from datetime import datetime
 
-from gsheets.service import GSheet
-from utils.service import TextUtils
-from config import Config
-from tasks import Worker
+from app.gsheets.service import GSheet
+from app.utils.service import TextUtils, GPTUtils
+from app.config import Config
+from app.tasks import Worker
 
 
 class TaskService:
@@ -13,7 +13,8 @@ class TaskService:
         self.settings = Config()
         self.send_task = Worker()
         self.gsheet = GSheet()
-        self.utils = TextUtils()
+        self.gpt_utils = GPTUtils()
+        self.text_utils = TextUtils()
 
     async def fetcher_worker(self) -> None:
         """
@@ -28,9 +29,10 @@ class TaskService:
 
                 for i in range(len(sheet_data)):
                     row_id = i + 2
-                    task_status: str = sheet_data[i][0]
-                    work_mode: str = sheet_data[i][1]
-                    auto_mode: str = sheet_data[i][2]
+                    row_data = sheet_data[i]
+                    task_status: str = row_data[0]
+                    work_mode: str = row_data[1]
+                    auto_mode: str = row_data[2]
                     log = None
 
                     if task_status == "Собрать ключи":
@@ -81,9 +83,18 @@ class TaskService:
                         Генерация описания
                         """
                         log = 1
-                        prompt = self.utils.row_to_ai_prompt(sheet_data[i])
+                        prompt = self.gpt_utils.row_to_generate_description_prompt(sheet_data[i])
                         self.gsheet.update_status("В работе", row_id)
-                        self.send_task.chatgpt_task.delay(prompt=prompt, row_id=row_id)
+                        self.send_task.gpt_generate_description_task.delay(prompt=prompt, row_id=row_id)
+
+                    if task_status == "Проверить ключи":
+                        log = True
+                        keywords = row_data[7]
+                        description = row_data[9]
+
+                        prompt = self.gpt_utils.check_keywords_in_desc_prompt(keywords, description)
+                        self.gsheet.update_status("В работе", row_id)
+                        self.send_task.gpt_check_keywords_in_desc_task.delay(prompt=prompt, row_id=row_id)
 
                     if task_status == "Выгрузить на ВБ":
                         """

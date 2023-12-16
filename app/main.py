@@ -1,8 +1,7 @@
-#!/usr/bin/env python
 import asyncio
 
-from config import Config
-from service import TaskService
+from app.config import Config
+from app.service import TaskService
 
 import logging
 import sentry_sdk

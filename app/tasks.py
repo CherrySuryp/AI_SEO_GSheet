@@ -5,12 +5,13 @@ from typing import Literal
 import sentry_sdk
 import requests
 
-from wb_upload.service import WildberriesAPI
-from gsheets.service import GSheet
-from utils.service import TextUtils
+from app.wb_upload.service import WildberriesAPI
+from app.gsheets.service import GSheet
+from app.utils.service import TextUtils
+from app.config import Config
+from app.queue import celery
 
-from config import Config
-from celery_app import celery
+config = Config()
 
 
 class Worker:
@@ -77,7 +78,7 @@ class Worker:
 
     @staticmethod
     @celery.task(soft_time_limit=180, time_limit=240)
-    def chatgpt_task(prompt: str, row_id: int) -> None:
+    def gpt_generate_description_task(prompt: str, row_id: int) -> None:
         try:
             time.sleep(random.randint(1, 5))
             result = requests.post(
@@ -105,6 +106,41 @@ class Worker:
                     Worker.gsheet.update_status("Завершено", row_id)
                     Worker.gsheet.update_cell("", f"L{row_id}")
                     Worker.gsheet.update_cell(result, f"J{row_id}")
+                    break
+        except Exception as e:
+            print(e)
+            sentry_sdk.capture_exception(e)
+
+    @staticmethod
+    @celery.task(soft_time_limit=180, time_limit=240)
+    def gpt_check_keywords_in_desc_task(prompt: str, row_id: int) -> None:
+        try:
+            result = requests.post(
+                f"http://{config.GPT_PATH}/gpt",
+                params={"prompt": prompt, "model": "gpt-3.5-turbo"},
+                headers={"x-api-key": config.GPT_KEY}
+            )
+            while True:
+                time.sleep(2)
+
+                task_id = result.json()["task_id"]
+                check = requests.get(
+                    f"http://{config.GPT_PATH}/{task_id}/result", headers={"x-api-key": Config().GPT_KEY}
+                )
+                if check.status_code == 500:
+                    Worker.gsheet.update_cell(
+                        "Произошла ошибка генерации текста. " "Скорее всего все сработает если попробовать еще раз.",
+                        f"L{row_id}",
+                    )
+                    Worker.gsheet.update_status("ОШИБКА", row_id)
+                    break
+                if check.json()["status"] == "SUCCESS":
+                    result = check.json()["result"]
+
+                    # Записываем результат в таблицу
+                    Worker.gsheet.update_status("Завершено", row_id)
+                    Worker.gsheet.update_cell("", f"L{row_id}")
+                    Worker.gsheet.update_cell(result, f"K{row_id}")
                     break
         except Exception as e:
             print(e)
