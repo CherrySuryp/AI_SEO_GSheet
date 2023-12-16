@@ -33,7 +33,7 @@ class TaskService:
                     task_status: str = row_data[0]
                     work_mode: str = row_data[1]
                     auto_mode: str = row_data[2]
-                    log = None
+                    log = False
 
                     if task_status == "Собрать ключи":
                         """

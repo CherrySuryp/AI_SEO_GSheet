@@ -11,7 +11,7 @@ services:
     build:
       context: .
     working_dir: /app
-    command: ["celery", "-A", "queue", "worker", "--loglevel=INFO", "--pool=prefork", "--concurrency=3"]
+    command: ["celery", "-A", "app.queue", "worker", "--loglevel=INFO", "--pool=prefork", "--concurrency=3"]
     depends_on:
       - redis
     networks:
