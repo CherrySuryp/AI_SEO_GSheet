@@ -1,10 +1,6 @@
-class TextUtils:
-    """
-    Утилиты для работы с текстом
-    """
-
+class GPTUtils:
     @staticmethod
-    def row_to_ai_prompt(data: list) -> str:
+    def row_to_generate_description_prompt(data: list) -> str:
         """
         Превращает несколько ячеек с данными в единый промпт для ChatGPT
         :param data:
@@ -22,6 +18,21 @@ class TextUtils:
             f"Старое описание: {old_desc}."
         )
         return prompt
+
+    @staticmethod
+    def check_keywords_in_desc_prompt(keywords: str, description: str) -> str:
+        prompt = (f"Текст: {description}\n"
+                  f"Ключевые слова: {keywords}\n"
+                  f"Задача: Из готового описания отбери и напиши вошедшие ключевые слова,"
+                  f" объедения по суффиксам, окончаниям и т.д."
+                  f" ВЫВЕСТИ НАДО ТОЛЬКО СПИСОК КЛЮЧЕВЫХ СЛОВ БЕЗ ЛИШНЕЙ ИНФОРМАЦИИ")
+        return prompt
+
+
+class TextUtils:
+    """
+    Утилиты для работы с текстом
+    """
 
     @staticmethod
     def transform_dict_keys_to_str(data: dict):
