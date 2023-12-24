@@ -102,8 +102,8 @@ class Worker:
                 if check.json()["status"] == "SUCCESS":
                     result = check.json()["result"]
                     break
-            Worker.gsheet.update_cell(wb_sku, f"E{row_id}")
             Worker.gsheet.update_cell(", ".join(result["keywords"]), f"H{row_id}")
+            Worker.gsheet.update_status("Завершено", row_id)
         except Exception as e:
             print(e)
             sentry_sdk.capture_exception(e)
