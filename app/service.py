@@ -39,7 +39,16 @@ class TaskService:
                         """
                         Сборка данных
                         """
-                        if work_mode == "По названию товара":
+                        if work_mode == "Только ключи":
+                            wb_sku = sheet_data[i][3]
+                            if wb_sku:
+                                log = 1
+                                self.gsheet.update_status("В работе", row_id)
+                                self.gsheet.update_cell("", f"L{row_id}")
+                                self.send_task.req_keywords_task(wb_sku=wb_sku, row_id=row_id)
+
+
+                        elif work_mode == "По названию товара":
                             wb_sku = sheet_data[i][3]
                             if wb_sku:
                                 log = 1
