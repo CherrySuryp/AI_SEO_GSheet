@@ -77,6 +77,38 @@ class Worker:
             Worker.gsheet.update_cell("", f"K{row_id}")
 
     @staticmethod
+    @celery.task()
+    def req_keywords_task(wb_sku: int | str, row_id: int):
+        try:
+            result = requests.post(
+                f"http://{Config().PARSER_PATH}/{wb_sku}",
+                params={"mode": "only_keywords", "wb_sku": wb_sku},
+                headers={"x-api-key": Config().PARSER_KEY},
+            )
+            while True:
+                time.sleep(2)
+
+                task_id = result.json()["task_id"]
+                check = requests.get(
+                    f"http://{Config().PARSER_PATH}/{task_id}/result", headers={"x-api-key": Config().GPT_KEY}
+                )
+                if result.status_code != 200 or check.status_code != 200:
+                    print(f"exc {row_id}")
+                    Worker.gsheet.update_cell(
+                        "Произошла ошибка сбора данных. " "Скорее всего все сработает если попробовать еще раз.",
+                        f"L{row_id}",
+                    )
+                    break
+                if check.json()["status"] == "SUCCESS":
+                    result = check.json()["result"]
+                    break
+            Worker.gsheet.update_cell(wb_sku, f"E{row_id}")
+            Worker.gsheet.update_cell(", ".join(result["keywords"]), f"H{row_id}")
+        except Exception as e:
+            print(e)
+            sentry_sdk.capture_exception(e)
+
+    @staticmethod
     @celery.task(soft_time_limit=180, time_limit=240)
     def gpt_generate_description_task(prompt: str, row_id: int) -> None:
         try:
